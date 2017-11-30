@@ -37,7 +37,15 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN 0 */
-
+extern DMA_HandleTypeDef   hdma;
+/*DMA status declared in "sdram_dma.c" file */
+extern uint32_t uwDMA_Transfer_Complete;
+/* SAI handler declared in "stm32746g_discovery_audio.c" file */
+extern SAI_HandleTypeDef haudio_out_sai;
+/* SAI handler declared in "stm32746g_discovery_audio.c" file */
+extern SAI_HandleTypeDef haudio_in_sai;
+/* SDRAM handler declared in "stm32746g_discovery_sdram.c" file */
+extern SDRAM_HandleTypeDef sdramHandle;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -84,6 +92,23 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void AUDIO_IN_SAIx_DMAx_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(haudio_in_sai.hdmarx);
+}
+
+void BSP_SDRAM_DMA_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(sdramHandle.hdma);
+}
+
+
+void AUDIO_OUT_SAIx_DMAx_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(haudio_out_sai.hdmatx);
+}
+
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

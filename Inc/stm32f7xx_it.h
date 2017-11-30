@@ -47,6 +47,9 @@
 
 void SysTick_Handler(void);
 void TIM1_TRG_COM_TIM11_IRQHandler(void);
+void AUDIO_OUT_SAIx_DMAx_IRQHandler(void);
+void BSP_SDRAM_DMA_IRQHandler(void);
+void AUDIO_IN_SAIx_DMAx_IRQHandler(void);
 
 #ifdef __cplusplus
 }

@@ -72,7 +72,6 @@ Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c \
 Middlewares/Third_Party/FreeRTOS/Source/queue.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c \
-Src/main.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c \
 Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
 Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
@@ -100,7 +99,8 @@ Drivers/BSP/stm32746g_discovery_sd.c \
 Drivers/BSP/stm32746g_discovery_sdram.c \
 Drivers/BSP/stm32746g_discovery_ts.c \
 Drivers/Components/wm8994/wm8994.c \
-Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma2d.c
+Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma2d.c \
+Src/main.c
 
 # ASM sources
 ASM_SOURCES =  \

@@ -170,11 +170,18 @@ int main(void)
 	/* Display LCD messages */
 	print_dbg("Hello world!");
 
-	BSP_SDRAM_Init();
-	BSP_AUDIO_IN_OUT_Init(INPUT_DEVICE_DIGITAL_MICROPHONE_2,
-			OUTPUT_DEVICE_HEADPHONE,
+	if (BSP_SDRAM_Init() != SDRAM_OK){
+		print_dbg("SDRAM Init FAILED!!!");
+	}
+	 if (BSP_AUDIO_IN_OUT_Init(INPUT_DEVICE_DIGITAL_MICROPHONE_2,
+			OUTPUT_DEVICE_BOTH,
 			DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION,
-			DEFAULT_AUDIO_IN_CHANNEL_NBR);
+			DEFAULT_AUDIO_IN_CHANNEL_NBR) == AUDIO_OK){
+		 print_dbg("Audio init success");
+	 }
+	 else {
+		 print_dbg("Audio init FAILED!");
+	 }
 	memset((uint16_t*) AUDIO_BUFFER_IN, 0, AUDIO_BLOCK_SIZE * 2);
 	memset((uint16_t*) AUDIO_BUFFER_OUT, 0, AUDIO_BLOCK_SIZE * 2);
 	audio_rec_buffer_state = BUFFER_OFFSET_NONE;
@@ -1116,11 +1123,15 @@ void StartDefaultTask(void const * argument) {
 
 	print_dbg("Default tasks started");
 	/* Start Recording */
-	BSP_AUDIO_IN_Record((uint16_t*) AUDIO_BUFFER_IN, AUDIO_BLOCK_SIZE);
+	if (BSP_AUDIO_IN_Record((uint16_t*) AUDIO_BUFFER_IN, AUDIO_BLOCK_SIZE) != AUDIO_OK){
+		print_dbg("Audio IN Record FAILED!!!");
+	}
 
 	/* Start Playback */
 	BSP_AUDIO_OUT_SetAudioFrameSlot(CODEC_AUDIOFRAME_SLOT_02);
-	BSP_AUDIO_OUT_Play((uint16_t*) AUDIO_BUFFER_OUT, AUDIO_BLOCK_SIZE * 2);
+	if (BSP_AUDIO_OUT_Play((uint16_t*) AUDIO_BUFFER_OUT, AUDIO_BLOCK_SIZE * 2) != AUDIO_OK){
+		print_dbg("Audio OUT Play FAILED!!!");
+	}
 
 	print_dbg("Audio initialized");
 
