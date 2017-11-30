@@ -382,11 +382,15 @@
 
 /* USER CODE BEGIN Private defines */
 
+#define RGB565_BYTE_PER_PIXEL     2
+#define ARBG8888_BYTE_PER_PIXEL   4
+
+#define LCD_FRAME_BUFFER          SDRAM_DEVICE_ADDR
 /**
- * @brief  SDRAM Write read buffer start address after CAM Frame buffer
- * Assuming Camera frame buffer is of size 640x480 and format RGB565 (16 bits per pixel).
- */
-#define SDRAM_WRITE_READ_ADDR SDRAM_DEVICE_ADDR
+  * @brief  Camera frame buffer start address
+  * Assuming LCD frame buffer is of size 480x800 and format ARGB8888 (32 bits per pixel).
+  */
+#define SDRAM_WRITE_READ_ADDR ((uint32_t)(LCD_FRAME_BUFFER + (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * ARBG8888_BYTE_PER_PIXEL)))
 
 #define SDRAM_WRITE_READ_ADDR_OFFSET ((uint32_t)0x0800)
 #define SRAM_WRITE_READ_ADDR_OFFSET  SDRAM_WRITE_READ_ADDR_OFFSET

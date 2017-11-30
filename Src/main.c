@@ -99,6 +99,9 @@ void StartDefaultTask(void const * argument);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
+static void print_dbg(char* msg);
+static void CPU_CACHE_Enable(void);
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -114,8 +117,9 @@ typedef enum
 #define AUDIO_BUFFER_IN    AUDIO_REC_START_ADDR     /* In SDRAM */
 #define AUDIO_BUFFER_OUT   (AUDIO_REC_START_ADDR + (AUDIO_BLOCK_SIZE * 2)) /* In SDRAM */
 uint32_t audio_rec_buffer_state;
+uint16_t debug_msg_pos = 10;
 
-static void CPU_CACHE_Enable(void);
+
 
 /* USER CODE END 0 */
 
@@ -129,29 +133,43 @@ int main(void)
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
-  CPU_CACHE_Enable();
-  /* USER CODE END Init */
+	/* USER CODE BEGIN Init */
+	CPU_CACHE_Enable();
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_LTDC_Init();
-  MX_SAI2_Init();
-  MX_RNG_Init();
-  MX_SPDIFRX_Init();
-  MX_USART1_UART_Init();
-  MX_DMA2D_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_LTDC_Init();
+	MX_SAI2_Init();
+	MX_RNG_Init();
+	MX_SPDIFRX_Init();
+	MX_USART1_UART_Init();
+	MX_DMA2D_Init();
 
-  /* USER CODE BEGIN 2 */
+	/* USER CODE BEGIN 2 */
+	BSP_LCD_Init();
+	BSP_LCD_LayerDefaultInit(LTDC_ACTIVE_LAYER, LCD_FRAME_BUFFER);
+	BSP_LCD_SelectLayer(LTDC_ACTIVE_LAYER);
+
+	/* Clear the LCD */
+	BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+	BSP_LCD_Clear(LCD_COLOR_WHITE);
+
+	/* Set the LCD Text Color */
+	BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);
+
+	/* Display LCD messages */
+	print_dbg("Hello world!");
+
 	BSP_SDRAM_Init();
 	BSP_AUDIO_IN_OUT_Init(INPUT_DEVICE_DIGITAL_MICROPHONE_2,
 			OUTPUT_DEVICE_HEADPHONE,
@@ -161,6 +179,7 @@ int main(void)
 	memset((uint16_t*) AUDIO_BUFFER_OUT, 0, AUDIO_BLOCK_SIZE * 2);
 	audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 
+	print_dbg("Init completed");
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -1025,6 +1044,23 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static void print_dbg(char* msg) {
+	if (debug_msg_pos >= 470) {
+		/* Clear the LCD */
+		BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+		BSP_LCD_Clear(LCD_COLOR_WHITE);
+		debug_msg_pos = 10;
+	}
+
+	/* Set the LCD Text Color */
+	BSP_LCD_SetTextColor(LCD_COLOR_RED);
+
+	/* Display LCD messages */
+	BSP_LCD_DisplayStringAt(10, debug_msg_pos, (uint8_t *) msg, LEFT_MODE);
+
+	debug_msg_pos += 25;
+}
+
 static void CPU_CACHE_Enable(void) {
 	(*(uint32_t *) 0xE000ED94) &= ~0x5;
 	(*(uint32_t *) 0xE000ED98) = 0x0; //MPU->RNR
@@ -1077,6 +1113,8 @@ void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
 void StartDefaultTask(void const * argument) {
 
 	/* USER CODE BEGIN 5 */
+
+	print_dbg("Default tasks started");
 	/* Start Recording */
 	BSP_AUDIO_IN_Record((uint16_t*) AUDIO_BUFFER_IN, AUDIO_BLOCK_SIZE);
 
@@ -1084,15 +1122,20 @@ void StartDefaultTask(void const * argument) {
 	BSP_AUDIO_OUT_SetAudioFrameSlot(CODEC_AUDIOFRAME_SLOT_02);
 	BSP_AUDIO_OUT_Play((uint16_t*) AUDIO_BUFFER_OUT, AUDIO_BLOCK_SIZE * 2);
 
+	print_dbg("Audio initialized");
+
 	/* Infinite loop */
 	for (;;) {
 		/* Wait end of half block recording */
 		while (audio_rec_buffer_state != BUFFER_OFFSET_HALF);
 
+		print_dbg("loop event 2!");
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 1st half block */
 		memcpy((uint16_t *) (AUDIO_BUFFER_OUT), (uint16_t *) (AUDIO_BUFFER_IN),
 		AUDIO_BLOCK_SIZE);
+
+		print_dbg("loop event 1!");
 
 		/* Wait end of one block recording */
 		while (audio_rec_buffer_state != BUFFER_OFFSET_FULL);
@@ -1102,6 +1145,8 @@ void StartDefaultTask(void const * argument) {
 		memcpy((uint16_t *) (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE)),
 				(uint16_t *) (AUDIO_BUFFER_IN + (AUDIO_BLOCK_SIZE)),
 				AUDIO_BLOCK_SIZE);
+		print_dbg("loop event 2!");
+
 	}
 	/* USER CODE END 5 */
 }
