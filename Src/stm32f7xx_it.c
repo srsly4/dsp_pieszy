@@ -34,6 +34,7 @@
 #include "stm32f7xx_hal.h"
 #include "stm32f7xx.h"
 #include "stm32f7xx_it.h"
+#include "stm32746g_discovery_audio.h"
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN 0 */
@@ -93,17 +94,30 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
+/**
+  * @brief This function handles DMA2 Stream 7 interrupt request.
+  * @param None
+  * @retval None
+  */
 void AUDIO_IN_SAIx_DMAx_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(haudio_in_sai.hdmarx);
 }
 
+/**
+  * @brief  Handles SDRAM DMA transfer interrupt request.
+  * @retval None
+  */
 void BSP_SDRAM_DMA_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(sdramHandle.hdma);
 }
 
-
+/**
+  * @brief  This function handles DMA2 Stream 6 interrupt request.
+  * @param  None
+  * @retval None
+  */
 void AUDIO_OUT_SAIx_DMAx_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(haudio_out_sai.hdmatx);

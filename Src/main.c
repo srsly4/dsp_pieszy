@@ -1140,13 +1140,11 @@ void StartDefaultTask(void const * argument) {
 		/* Wait end of half block recording */
 		while (audio_rec_buffer_state != BUFFER_OFFSET_HALF);
 
-		print_dbg("loop event 2!");
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 1st half block */
 		memcpy((uint16_t *) (AUDIO_BUFFER_OUT), (uint16_t *) (AUDIO_BUFFER_IN),
 		AUDIO_BLOCK_SIZE);
 
-		print_dbg("loop event 1!");
 
 		/* Wait end of one block recording */
 		while (audio_rec_buffer_state != BUFFER_OFFSET_FULL);
@@ -1156,7 +1154,6 @@ void StartDefaultTask(void const * argument) {
 		memcpy((uint16_t *) (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE)),
 				(uint16_t *) (AUDIO_BUFFER_IN + (AUDIO_BLOCK_SIZE)),
 				AUDIO_BLOCK_SIZE);
-		print_dbg("loop event 2!");
 
 	}
 	/* USER CODE END 5 */
