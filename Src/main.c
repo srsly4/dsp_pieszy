@@ -113,9 +113,12 @@ typedef enum
   BUFFER_OFFSET_FULL = 2,
 } BUFFER_StateTypeDef;
 
+#define AUDIO_SAMPLE_SIZE 2
 #define AUDIO_BLOCK_SIZE   ((uint32_t)512)
+#define AUDIO_BLOCK_SAMPLES (AUDIO_BLOCK_SIZE/AUDIO_SAMPLE_SIZE)
 #define AUDIO_BUFFER_IN    AUDIO_REC_START_ADDR     /* In SDRAM */
 #define AUDIO_BUFFER_OUT   (AUDIO_REC_START_ADDR + (AUDIO_BLOCK_SIZE * 2)) /* In SDRAM */
+#define AUDIO_BUFFER_INTERNAL (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE * 2))
 uint32_t audio_rec_buffer_state;
 uint16_t debug_msg_pos = 10;
 
@@ -1091,6 +1094,10 @@ static void CPU_CACHE_Enable(void) {
 	SCB_EnableDCache();
 }
 
+static void audio_process(void) {
+
+}
+
 
 /**
   * @brief Manages the DMA Transfer complete interrupt.
@@ -1142,7 +1149,13 @@ void StartDefaultTask(void const * argument) {
 
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 1st half block */
-		memcpy((uint16_t *) (AUDIO_BUFFER_OUT), (uint16_t *) (AUDIO_BUFFER_IN),
+		memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_IN),
+		AUDIO_BLOCK_SIZE);
+
+		// process 1st half
+		audio_process();
+
+		memcpy((uint16_t *) (AUDIO_BUFFER_OUT), (uint16_t *) (AUDIO_BUFFER_INTERNAL),
 		AUDIO_BLOCK_SIZE);
 
 
@@ -1151,8 +1164,16 @@ void StartDefaultTask(void const * argument) {
 
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 2nd half block */
+
+		memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL),
+						(uint16_t *) (AUDIO_BUFFER_IN + (AUDIO_BLOCK_SIZE)),
+						AUDIO_BLOCK_SIZE);
+
+		// process 2nd half
+		audio_process();
+
 		memcpy((uint16_t *) (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE)),
-				(uint16_t *) (AUDIO_BUFFER_IN + (AUDIO_BLOCK_SIZE)),
+				(uint16_t *) (AUDIO_BUFFER_INTERNAL),
 				AUDIO_BLOCK_SIZE);
 
 	}
