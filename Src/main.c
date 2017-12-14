@@ -1109,8 +1109,9 @@ static void audio_process(void) {
 //	}
 
 // pitch
+	int pitch_ratio = 16;
 	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
-		buffer[i] = (buffer[2*i] + buffer[(2*i)+1])/16;
+		buffer[i] = (buffer[2*i]/pitch_ratio) + (buffer[(2*i)+1]/pitch_ratio);
 	}
 	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
 		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
