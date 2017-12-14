@@ -114,11 +114,13 @@ typedef enum
 } BUFFER_StateTypeDef;
 
 #define AUDIO_SAMPLE_SIZE 2
-#define AUDIO_BLOCK_SIZE   ((uint32_t)512)
+#define AUDIO_BLOCK_SIZE   ((uint32_t)4096)
 #define AUDIO_BLOCK_SAMPLES (AUDIO_BLOCK_SIZE/AUDIO_SAMPLE_SIZE)
 #define AUDIO_BUFFER_IN    AUDIO_REC_START_ADDR     /* In SDRAM */
 #define AUDIO_BUFFER_OUT   (AUDIO_REC_START_ADDR + (AUDIO_BLOCK_SIZE * 2)) /* In SDRAM */
 #define AUDIO_BUFFER_INTERNAL (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE * 2))
+#define AUDIO_BUFFER_SECONDARY (AUDIO_BUFFER_INTERNAL + (AUDIO_BLOCK_SIZE*2))
+#define AUDIO_BUFFER_OFFSET (AUDIO_BUFFER_SECONDARY + (AUDIO_BLOCK_SIZE*2))
 uint32_t audio_rec_buffer_state;
 uint16_t debug_msg_pos = 10;
 
@@ -1096,18 +1098,43 @@ static void CPU_CACHE_Enable(void) {
 
 static void audio_process(void) {
 	int16_t* buffer = (int16_t*)AUDIO_BUFFER_INTERNAL;
+	int16_t* secondary = (int16_t*)AUDIO_BUFFER_SECONDARY;
+	int16_t* offset_buff = (int16_t*)AUDIO_BUFFER_OFFSET;
 
+	int offset = 3800;
+// natezenie
 //	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
 //		buffer[i] = buffer[i]/32;
 //		buffer[i] = buffer[i]-1;
 //	}
 
+// pitch
 	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
 		buffer[i] = (buffer[2*i] + buffer[(2*i)+1])/16;
 	}
 	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
 		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
 	}
+
+// fader
+//	int offsetCurr = 0;
+//	int fadeCurr = 0;
+//	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+//		if (offsetCurr < offset) {
+//			secondary[i] = buffer[i] + (offset_buff[offsetCurr]/2);
+//			offsetCurr += 1;
+//		} else {
+//			secondary[i] = buffer[i] + (buffer[fadeCurr]/2);
+//			fadeCurr += 1;
+//		}
+//	}
+//
+//	for (int i = 0; i < offset; i++){
+//		offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES-offset+i];
+//	}
+//
+//	memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
+//			AUDIO_BLOCK_SIZE);
 }
 
 
