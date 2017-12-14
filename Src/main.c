@@ -179,7 +179,7 @@ int main(void)
 	 if (BSP_AUDIO_IN_OUT_Init(INPUT_DEVICE_DIGITAL_MICROPHONE_2,
 			OUTPUT_DEVICE_BOTH,
 			DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION,
-			DEFAULT_AUDIO_IN_CHANNEL_NBR) == AUDIO_OK){
+			1) == AUDIO_OK){
 		 print_dbg("Audio init success");
 	 }
 	 else {
@@ -1095,7 +1095,19 @@ static void CPU_CACHE_Enable(void) {
 }
 
 static void audio_process(void) {
+	int16_t* buffer = (int16_t*)AUDIO_BUFFER_INTERNAL;
 
+//	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+//		buffer[i] = buffer[i]/32;
+//		buffer[i] = buffer[i]-1;
+//	}
+
+	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
+		buffer[i] = (buffer[2*i] + buffer[(2*i)+1])/16;
+	}
+	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
+		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
+	}
 }
 
 
