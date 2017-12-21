@@ -46,11 +46,13 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
+#include "string.h"
 #include "main.h"
+#include "gui.h"
 #include "stm32f7xx_hal.h"
-#include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
+
 
 #include "stm32f7xx_hal_conf.h"
 #include "stdio.h"
@@ -58,9 +60,10 @@
 #include "stm32746g_discovery_sdram.h"
 #include "stm32746g_discovery_audio.h"
 #include "stm32746g_discovery_lcd.h"
+#include "stm32746g_discovery_ts.h"
 #include "stm32f7xx_hal_i2s.h"
 #include "stm32f7xx_hal_dma2d.h"
-
+#include "cmsis_os.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -79,9 +82,19 @@ SPDIFRX_HandleTypeDef hspdif;
 UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
+osThreadId guiTaskHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+osMutexDef(gui_print);
+osMutexId(gui_print_id);
+
+osSemaphoreId audioHalfTransferCompleteSemaphore;
+osSemaphoreDef(audioHalfTransferCompleteSemaphore);
+
+osSemaphoreId audioFullTransferCompleteSemaphore;
+osSemaphoreDef(audioFullTransferCompleteSemaphore);
+
 
 /* USER CODE END PV */
 
@@ -99,7 +112,7 @@ void StartDefaultTask(void const * argument);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
-static void print_dbg(char* msg);
+
 static void CPU_CACHE_Enable(void);
 
 /* USER CODE END PFP */
@@ -172,34 +185,40 @@ int main(void)
 	/* Set the LCD Text Color */
 	BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);
 
-	/* Display LCD messages */
-	print_dbg("Hello world!");
+	uint8_t ts_status = BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
+	print_dbg_unsafe(ts_status == TS_OK ? "Touchscreen OK" : "Touchscreen error");
 
 	if (BSP_SDRAM_Init() != SDRAM_OK){
-		print_dbg("SDRAM Init FAILED!!!");
+		print_dbg_unsafe("SDRAM Init FAILED!!!");
 	}
 	 if (BSP_AUDIO_IN_OUT_Init(INPUT_DEVICE_DIGITAL_MICROPHONE_2,
 			OUTPUT_DEVICE_BOTH,
 			DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION,
 			1) == AUDIO_OK){
-		 print_dbg("Audio init success");
+		 print_dbg_unsafe("Audio init success");
 	 }
 	 else {
-		 print_dbg("Audio init FAILED!");
+		 print_dbg_unsafe("Audio init FAILED!");
 	 }
 	memset((uint16_t*) AUDIO_BUFFER_IN, 0, AUDIO_BLOCK_SIZE * 2);
 	memset((uint16_t*) AUDIO_BUFFER_OUT, 0, AUDIO_BLOCK_SIZE * 2);
 	audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 
-	print_dbg("Init completed");
+	print_dbg_unsafe("Init completed");
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+	gui_print_id = osMutexCreate(osMutex(gui_print));
+
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+
+	audioHalfTransferCompleteSemaphore =
+			osSemaphoreCreate(osSemaphore(audioHalfTransferCompleteSemaphore), 1);
+	audioFullTransferCompleteSemaphore =
+			osSemaphoreCreate(osSemaphore(audioFullTransferCompleteSemaphore), 1);
+
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -208,13 +227,15 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  //TaskHandle_t xHandle = NULL;
-  //xTaskCreate(testTask, "TEST", 32, (void*)1, tskIDLE_PRIORITY, &xHandle);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityRealtime, 0, 128);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  osThreadDef(guiTask, startTouchscreenTask, osPriorityNormal, 0, 128);
+  guiTaskHandle = osThreadCreate(osThread(guiTask), NULL);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -1056,21 +1077,27 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-static void print_dbg(char* msg) {
-	if (debug_msg_pos >= 470) {
-		/* Clear the LCD */
-		BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
-		BSP_LCD_Clear(LCD_COLOR_WHITE);
-		debug_msg_pos = 10;
-	}
+void print_dbg_unsafe(char *msg) {
+	if (debug_msg_pos >= BSP_LCD_GetYSize()-25) {
+			/* Clear the LCD */
+			BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+			BSP_LCD_Clear(LCD_COLOR_WHITE);
+			debug_msg_pos = 10;
+		}
 
-	/* Set the LCD Text Color */
-	BSP_LCD_SetTextColor(LCD_COLOR_RED);
+		/* Set the LCD Text Color */
+		BSP_LCD_SetTextColor(LCD_COLOR_RED);
 
-	/* Display LCD messages */
-	BSP_LCD_DisplayStringAt(10, debug_msg_pos, (uint8_t *) msg, LEFT_MODE);
+		/* Display LCD messages */
+		BSP_LCD_DisplayStringAt(10, debug_msg_pos, (uint8_t *) msg, LEFT_MODE);
 
-	debug_msg_pos += 25;
+		debug_msg_pos += 25;
+}
+
+void print_dbg(char* msg) {
+	osMutexWait(gui_print_id, osWaitForever);
+	print_dbg_unsafe(msg);
+	osMutexRelease(gui_print_id);
 }
 
 static void CPU_CACHE_Enable(void) {
@@ -1109,15 +1136,15 @@ static void audio_process(void) {
 //	}
 
 // pitch
-	int pitch_ratio = 16;
-	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
-		buffer[i] = (buffer[2*i]/pitch_ratio) + (buffer[(2*i)+1]/pitch_ratio);
-	}
-	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
-		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
-	}
+//	int pitch_ratio = 16;
+//	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
+//		buffer[i] = (buffer[2*i]/pitch_ratio) + (buffer[(2*i)+1]/pitch_ratio);
+//	}
+//	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
+//		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
+//	}
 
-// fader
+// echo
 //	int offsetCurr = 0;
 //	int fadeCurr = 0;
 //	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -1144,10 +1171,10 @@ static void audio_process(void) {
   * @param None
   * @retval None
   */
-void BSP_AUDIO_IN_TransferComplete_CallBack(void)
-{
-  audio_rec_buffer_state = BUFFER_OFFSET_FULL;
-  return;
+void BSP_AUDIO_IN_TransferComplete_CallBack(void) {
+	osSemaphoreRelease(audioFullTransferCompleteSemaphore);
+	audio_rec_buffer_state = BUFFER_OFFSET_FULL;
+	return;
 }
 
 /**
@@ -1155,10 +1182,10 @@ void BSP_AUDIO_IN_TransferComplete_CallBack(void)
   * @param  None
   * @retval None
   */
-void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
-{
-  audio_rec_buffer_state = BUFFER_OFFSET_HALF;
-  return;
+void BSP_AUDIO_IN_HalfTransfer_CallBack(void) {
+	osSemaphoreRelease(audioHalfTransferCompleteSemaphore);
+	audio_rec_buffer_state = BUFFER_OFFSET_HALF;
+	return;
 }
 
 /* USER CODE END 4 */
@@ -1168,7 +1195,7 @@ void StartDefaultTask(void const * argument) {
 
 	/* USER CODE BEGIN 5 */
 
-	print_dbg("Default tasks started");
+	print_dbg("Audio process started");
 	/* Start Recording */
 	if (BSP_AUDIO_IN_Record((uint16_t*) AUDIO_BUFFER_IN, AUDIO_BLOCK_SIZE) != AUDIO_OK){
 		print_dbg("Audio IN Record FAILED!!!");
@@ -1180,12 +1207,11 @@ void StartDefaultTask(void const * argument) {
 		print_dbg("Audio OUT Play FAILED!!!");
 	}
 
-	print_dbg("Audio initialized");
-
 	/* Infinite loop */
 	for (;;) {
 		/* Wait end of half block recording */
-		while (audio_rec_buffer_state != BUFFER_OFFSET_HALF);
+		//while (audio_rec_buffer_state != BUFFER_OFFSET_HALF);
+		osSemaphoreWait(audioHalfTransferCompleteSemaphore, 1);
 
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 1st half block */
@@ -1200,7 +1226,8 @@ void StartDefaultTask(void const * argument) {
 
 
 		/* Wait end of one block recording */
-		while (audio_rec_buffer_state != BUFFER_OFFSET_FULL);
+		//while (audio_rec_buffer_state != BUFFER_OFFSET_FULL);
+		osSemaphoreWait(audioFullTransferCompleteSemaphore, 1);
 
 		audio_rec_buffer_state = BUFFER_OFFSET_NONE;
 		/* Copy recorded 2nd half block */

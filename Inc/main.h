@@ -397,6 +397,9 @@
 
 #define AUDIO_REC_START_ADDR         SDRAM_WRITE_READ_ADDR
 
+void print_dbg(char* msg);
+
+
 /* USER CODE END Private defines */
 
 void _Error_Handler(char *, int);
