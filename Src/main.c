@@ -46,6 +46,9 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
+
+#include "stm32f746xx.h"
+#include "stdint.h"
 #include "string.h"
 #include "main.h"
 #include "gui.h"
@@ -64,6 +67,7 @@
 #include "stm32f7xx_hal_i2s.h"
 #include "stm32f7xx_hal_dma2d.h"
 #include "cmsis_os.h"
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -129,15 +133,17 @@ typedef enum
 #define AUDIO_SAMPLE_SIZE 2
 #define AUDIO_BLOCK_SIZE   ((uint32_t)4096)
 #define AUDIO_BLOCK_SAMPLES (AUDIO_BLOCK_SIZE/AUDIO_SAMPLE_SIZE)
+
 #define AUDIO_BUFFER_IN    AUDIO_REC_START_ADDR     /* In SDRAM */
 #define AUDIO_BUFFER_OUT   (AUDIO_REC_START_ADDR + (AUDIO_BLOCK_SIZE * 2)) /* In SDRAM */
 #define AUDIO_BUFFER_INTERNAL (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE * 2))
 #define AUDIO_BUFFER_SECONDARY (AUDIO_BUFFER_INTERNAL + (AUDIO_BLOCK_SIZE*2))
 #define AUDIO_BUFFER_OFFSET (AUDIO_BUFFER_SECONDARY + (AUDIO_BLOCK_SIZE*2))
+
 uint32_t audio_rec_buffer_state;
 uint16_t debug_msg_pos = 10;
 
-
+volatile int16_t rms_value = 99;
 
 /* USER CODE END 0 */
 
@@ -200,6 +206,7 @@ int main(void)
 	 else {
 		 print_dbg_unsafe("Audio init FAILED!");
 	 }
+
 	memset((uint16_t*) AUDIO_BUFFER_IN, 0, AUDIO_BLOCK_SIZE * 2);
 	memset((uint16_t*) AUDIO_BUFFER_OUT, 0, AUDIO_BLOCK_SIZE * 2);
 	audio_rec_buffer_state = BUFFER_OFFSET_NONE;
@@ -1145,24 +1152,29 @@ static void audio_process(void) {
 //	}
 
 // echo
-//	int offsetCurr = 0;
-//	int fadeCurr = 0;
-//	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-//		if (offsetCurr < offset) {
-//			secondary[i] = buffer[i] + (offset_buff[offsetCurr]/2);
-//			offsetCurr += 1;
-//		} else {
-//			secondary[i] = buffer[i] + (buffer[fadeCurr]/2);
-//			fadeCurr += 1;
-//		}
-//	}
-//
-//	for (int i = 0; i < offset; i++){
-//		offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES-offset+i];
-//	}
-//
-//	memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
-//			AUDIO_BLOCK_SIZE);
+	int offsetCurr = 0;
+	int fadeCurr = 0;
+	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+		if (offsetCurr < offset) {
+			secondary[i] = buffer[i] + (offset_buff[offsetCurr]/2);
+			offsetCurr += 1;
+		} else {
+			secondary[i] = buffer[i] + (buffer[fadeCurr]/2);
+			fadeCurr += 1;
+		}
+	}
+
+	for (int i = 0; i < offset; i++){
+		offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES-offset+i];
+	}
+
+	arm_rms_q15(
+		AUDIO_BUFFER_INTERNAL,
+		AUDIO_BLOCK_SAMPLES,
+	&rms_value);
+
+	memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
+			AUDIO_BLOCK_SIZE);
 }
 
 

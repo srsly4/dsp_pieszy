@@ -101,6 +101,7 @@ Drivers/BSP/stm32746g_discovery_ts.c \
 Drivers/Components/wm8994/wm8994.c \
 Drivers/Components/ft5336/ft5336.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma2d.c \
+$(shell find $(STM32CUBE_ROOT)Drivers/CMSIS/DSP_Lib/Source -name "*.c") \
 Src/main.c \
 Src/gui.c
 
@@ -167,6 +168,7 @@ C_INCLUDES =  \
 -IMiddlewares/Third_Party/FreeRTOS/Source/include \
 -IMiddlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS \
 -IDrivers/CMSIS/Include \
+-IDrivers/CMSIS/Device/ST/STM32F7xx/Include \
 -IDrivers/BSP
 
 
@@ -182,7 +184,7 @@ endif
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)"
-
+CFLAGS += -DARM_MATH_CM7 -D__FPU_PRESENT
 
 #######################################
 # LDFLAGS

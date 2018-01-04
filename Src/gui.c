@@ -10,6 +10,7 @@ void startTouchscreenTask(void const *arguments) {
 	char buffer[30];
 	uint16_t x, y;
 	print_dbg("Touch task started");
+
 	while(1) {
 		BSP_TS_GetState(&TS_State);
 		x = TS_State.touchX[0];
@@ -20,7 +21,8 @@ void startTouchscreenTask(void const *arguments) {
 			print_dbg(buffer);
 			osDelay(250);
 		}
-
+		osDelay(100);
+		sprintf(&buffer, "RMS: %d", rms_value);
+		print_dbg(buffer);
 	}
-	osDelay(50);
 }

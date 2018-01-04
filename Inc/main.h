@@ -51,6 +51,8 @@
   /* Includes ------------------------------------------------------------------*/
 
 /* USER CODE BEGIN Includes */
+
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
@@ -382,6 +384,7 @@
 
 /* USER CODE BEGIN Private defines */
 
+
 #define RGB565_BYTE_PER_PIXEL     2
 #define ARBG8888_BYTE_PER_PIXEL   4
 
@@ -397,8 +400,10 @@
 
 #define AUDIO_REC_START_ADDR         SDRAM_WRITE_READ_ADDR
 
+
 void print_dbg(char* msg);
 
+extern volatile int16_t rms_value;
 
 /* USER CODE END Private defines */
 
