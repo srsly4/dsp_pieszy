@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "main.h"
+#include "stm32746g_discovery_lcd.h"
 #include "stm32746g_discovery_ts.h"
 #include "cmsis_os.h"
 
@@ -21,8 +22,16 @@ void startTouchscreenTask(void const *arguments) {
 			print_dbg(buffer);
 			osDelay(250);
 		}
-		osDelay(100);
-		sprintf(&buffer, "RMS: %d", rms_value);
-		print_dbg(buffer);
+		osDelay(50);
+		//sprintf(&buffer, "RMS: %d", rms_value);
+		//print_dbg(buffer);
+		BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+		BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+		BSP_LCD_FillRect(BSP_LCD_GetXSize()-32, 0, 32, BSP_LCD_GetYSize());
+		BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);
+		BSP_LCD_SetBackColor(LCD_COLOR_DARKBLUE);
+		uint32_t rms_height = (rms_value*BSP_LCD_GetYSize()/4000);
+		rms_height = rms_height > BSP_LCD_GetYSize() ? BSP_LCD_GetYSize() : rms_height;
+		BSP_LCD_FillRect(BSP_LCD_GetXSize()-32, BSP_LCD_GetYSize()-rms_height, 32, rms_height);
 	}
 }
