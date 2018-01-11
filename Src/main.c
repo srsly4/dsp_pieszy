@@ -68,6 +68,7 @@
 #include "stm32f7xx_hal_dma2d.h"
 #include "cmsis_os.h"
 #include "arm_math.h"
+#include "arm_const_structs.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -87,6 +88,7 @@ UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 osThreadId guiTaskHandle;
+osThreadId fftTaskHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -130,20 +132,14 @@ typedef enum
   BUFFER_OFFSET_FULL = 2,
 } BUFFER_StateTypeDef;
 
-#define AUDIO_SAMPLE_SIZE 2
-#define AUDIO_BLOCK_SIZE   ((uint32_t)4096)
-#define AUDIO_BLOCK_SAMPLES (AUDIO_BLOCK_SIZE/AUDIO_SAMPLE_SIZE)
 
-#define AUDIO_BUFFER_IN    AUDIO_REC_START_ADDR     /* In SDRAM */
-#define AUDIO_BUFFER_OUT   (AUDIO_REC_START_ADDR + (AUDIO_BLOCK_SIZE * 2)) /* In SDRAM */
-#define AUDIO_BUFFER_INTERNAL (AUDIO_BUFFER_OUT + (AUDIO_BLOCK_SIZE * 2))
-#define AUDIO_BUFFER_SECONDARY (AUDIO_BUFFER_INTERNAL + (AUDIO_BLOCK_SIZE*2))
-#define AUDIO_BUFFER_OFFSET (AUDIO_BUFFER_SECONDARY + (AUDIO_BLOCK_SIZE*2))
 
 uint32_t audio_rec_buffer_state;
 uint16_t debug_msg_pos = 10;
 
+
 volatile int16_t rms_value = 99;
+
 
 /* USER CODE END 0 */
 
@@ -242,6 +238,10 @@ int main(void)
 
   osThreadDef(guiTask, startTouchscreenTask, osPriorityNormal, 0, 128);
   guiTaskHandle = osThreadCreate(osThread(guiTask), NULL);
+
+
+  osThreadDef(fftTask, startFFTTask, osPriorityNormal, 0, 128);
+  fftTaskHandle = osThreadCreate(osThread(fftTask), NULL);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -1087,13 +1087,15 @@ static void MX_GPIO_Init(void)
 void print_dbg_unsafe(char *msg) {
 	if (debug_msg_pos >= BSP_LCD_GetYSize()-25) {
 			/* Clear the LCD */
+			BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
 			BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
 			BSP_LCD_Clear(LCD_COLOR_WHITE);
 			debug_msg_pos = 10;
 		}
 
 		/* Set the LCD Text Color */
-		BSP_LCD_SetTextColor(LCD_COLOR_RED);
+		BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+		BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
 
 		/* Display LCD messages */
 		BSP_LCD_DisplayStringAt(10, debug_msg_pos, (uint8_t *) msg, LEFT_MODE);
@@ -1135,6 +1137,8 @@ static void audio_process(void) {
 	int16_t* secondary = (int16_t*)AUDIO_BUFFER_SECONDARY;
 	int16_t* offset_buff = (int16_t*)AUDIO_BUFFER_OFFSET;
 
+	//float32_t fft_buff[AUDIO_BLOCK_SAMPLES];
+
 	int offset = 3800;
 // natezenie
 //	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -1168,10 +1172,16 @@ static void audio_process(void) {
 		offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES-offset+i];
 	}
 
+
+	// RMS calculate
 	arm_rms_q15(
 		AUDIO_BUFFER_INTERNAL,
 		AUDIO_BLOCK_SAMPLES,
 	&rms_value);
+
+
+	// FFT
+
 
 	memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
 			AUDIO_BLOCK_SIZE);

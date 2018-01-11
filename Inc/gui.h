@@ -9,5 +9,6 @@
 #define INC_GUI_H_
 
 void startTouchscreenTask(void const *arguments);
+void startFFTTask(void const *arguments);
 
 #endif /* INC_GUI_H_ */

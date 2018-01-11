@@ -101,9 +101,10 @@ Drivers/BSP/stm32746g_discovery_ts.c \
 Drivers/Components/wm8994/wm8994.c \
 Drivers/Components/ft5336/ft5336.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma2d.c \
-$(shell find $(STM32CUBE_ROOT)Drivers/CMSIS/DSP_Lib/Source -name "*.c") \
 Src/main.c \
 Src/gui.c
+
+# $(shell find $(STM32CUBE_ROOT)Drivers/CMSIS/DSP_Lib/Source -name "*.c") \
 
 # ASM sources
 ASM_SOURCES =  \
@@ -193,8 +194,8 @@ CFLAGS += -DARM_MATH_CM7 -D__FPU_PRESENT
 LDSCRIPT = STM32F746NGHx_FLASH.ld
 
 # libraries
-LIBS = -lc -lm -lnosys
-LIBDIR =
+LIBS = -lc -lm -lnosys Drivers/CMSIS/Lib/GCC/libarm_cortexM7lfsp_math.a
+LIBDIR = 
 LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # default action: build all
