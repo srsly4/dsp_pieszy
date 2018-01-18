@@ -16,7 +16,7 @@ arm_rfft_fast_instance_f32 fft_init;
 
 volatile int16_t effect_type;
 
-const char * effect_labels[] = { "None", "Echo", "Pitch increase" };
+const char * effect_labels[] = { "None", "Echo", "Pitch increase", "FIR" };
 
 void startTouchscreenTask(void const *arguments) {
 	char buffer[30];
@@ -40,7 +40,7 @@ void startTouchscreenTask(void const *arguments) {
 }
 
 void startFFTTask(void const *arguments) {
-//	char buffer[30];
+	char buffer[30];
 //	print_dbg("FFT task started");
 
 //	arm_rfft_fast_init_f32(&fft_init, AUDIO_BLOCK_SAMPLES);
@@ -62,6 +62,7 @@ void startFFTTask(void const *arguments) {
 		BSP_LCD_FillRect(BSP_LCD_GetXSize() - 32,
 				BSP_LCD_GetYSize() - rms_height, 32, rms_height);
 
+
 		osMutexRelease(gui_print_id);
 //		osDelay(250);
 //		int16_t* buffer = (int16_t*)AUDIO_BUFFER_INTERNAL;
@@ -70,8 +71,9 @@ void startFFTTask(void const *arguments) {
 //	    }
 //		arm_rfft_fast_f32(&fft_init, fft_in_buff, fft_out_buff, 0);
 //	    arm_abs_f32(fft_out_buff, fft_out_buff, AUDIO_BLOCK_SAMPLES);
+//
+//		sprintf(&buffer, "FFT %d!", fft_out_buff[0]);
+//		print_dbg(buffer);
 
-		//sprintf(&buffer, "FFT %d!", fft_out_buff[0]);
-		//print_dbg(buffer);
 	}
 }

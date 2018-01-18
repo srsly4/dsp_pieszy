@@ -418,7 +418,8 @@
 #define EFFECT_NONE 0
 #define EFFECT_ECHO 1
 #define EFFECT_PITCH 2
-#define EFFECTS 3
+#define EFFECT_FIR 3
+#define EFFECTS 4
 
 void print_dbg(char* msg);
 

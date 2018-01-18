@@ -136,10 +136,26 @@ typedef enum
 
 uint32_t audio_rec_buffer_state;
 uint16_t debug_msg_pos = 10;
-
+arm_fir_instance_f32 S;
 
 volatile int16_t rms_value = 99;
 volatile int16_t effect_type = EFFECT_NONE;
+
+#define NUM_TAPS              29
+const float32_t firCoeffs32[NUM_TAPS] = {
+  -0.00007998, -0.002364f, -0.00012241, +0.0036977508f, +0.0080754303f, +0.0085302217f, -0.0000000000f, -0.0173976984f,
+  -0.0341458607f, -0.0333591565f, +0.0000000000f, +0.0676308395f, +0.1522061835f, +0.2229246956f, +0.2504960933f, +0.2229246956f,
+  +0.1522061835f, +0.0676308395f, +0.0000000000f, -0.0333591565f, -0.0341458607f, -0.0173976984f, -0.0000000000f, +0.0085302217f,
+  +0.0080754303f, +0.0036977508f, +0.0000000000f, -0.0015879294f, -0.0018225230f
+};
+
+q15_t firCoeffs15[NUM_TAPS] = {
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0
+};
+
 
 /* USER CODE END 0 */
 
@@ -203,6 +219,8 @@ int main(void)
 		 print_dbg_unsafe("Audio init FAILED!");
 	 }
 
+	 arm_float_to_q15(firCoeffs32, firCoeffs15, NUM_TAPS);
+	 arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&firCoeffs15[0], AUDIO_BUFFER_FFT_OUT, AUDIO_BLOCK_SAMPLES);
 	memset((uint16_t*) AUDIO_BUFFER_IN, 0, AUDIO_BLOCK_SIZE * 2);
 	memset((uint16_t*) AUDIO_BUFFER_OUT, 0, AUDIO_BLOCK_SIZE * 2);
 	audio_rec_buffer_state = BUFFER_OFFSET_NONE;
@@ -240,7 +258,7 @@ int main(void)
   guiTaskHandle = osThreadCreate(osThread(guiTask), NULL);
 
 
-  osThreadDef(fftTask, startFFTTask, osPriorityNormal, 0, 128);
+  osThreadDef(fftTask, startFFTTask, osPriorityNormal, 0, 256);
   fftTaskHandle = osThreadCreate(osThread(fftTask), NULL);
 
   /* USER CODE END RTOS_THREADS */
@@ -1137,6 +1155,7 @@ static void audio_process(void) {
 	int16_t* secondary = (int16_t*) AUDIO_BUFFER_SECONDARY;
 	int16_t* offset_buff = (int16_t*) AUDIO_BUFFER_OFFSET;
 
+
 	//float32_t fft_buff[AUDIO_BLOCK_SAMPLES];
 
 // natezenie
@@ -1148,10 +1167,13 @@ static void audio_process(void) {
 
 // pitch
 	if (effect_type == EFFECT_PITCH) {
-		int pitch_ratio = 16;
-		for (int i = 0; i < AUDIO_BLOCK_SAMPLES / 2; i++) {
+		int pitch_ratio = 8;
+		for (int i = 0; i < (AUDIO_BLOCK_SAMPLES / 2)-2; i++) {
 			buffer[i] = (buffer[2 * i] / pitch_ratio)
-					+ (buffer[(2 * i) + 1] / pitch_ratio);
+					+ (buffer[(2 * i) + 2] / pitch_ratio);
+
+			buffer[i] = (buffer[(2 * i) + 1] / pitch_ratio)
+					+ (buffer[(2 * i) + 3] / pitch_ratio);
 		}
 		for (int i = AUDIO_BLOCK_SAMPLES / 2; i < AUDIO_BLOCK_SAMPLES; i++) {
 			buffer[i] = buffer[i - (AUDIO_BLOCK_SAMPLES / 2)];
@@ -1180,7 +1202,11 @@ static void audio_process(void) {
 		memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
 				AUDIO_BLOCK_SIZE);
 	}
-
+	else if (effect_type == EFFECT_FIR) {
+		arm_fir_f32(&S, buffer, secondary, AUDIO_BLOCK_SAMPLES);
+		memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
+						AUDIO_BLOCK_SIZE);
+	}
 	// RMS calculate
 	arm_rms_q15(
 		AUDIO_BUFFER_INTERNAL,
