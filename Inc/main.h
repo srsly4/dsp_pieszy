@@ -415,9 +415,16 @@
 #define AUDIO_BUFFER_FFT_OUT (AUDIO_BUFFER_OFFSET + (AUDIO_BLOCK_FLOAT_SAMPLES_SIZE))
 
 
+#define EFFECT_NONE 0
+#define EFFECT_ECHO 1
+#define EFFECT_PITCH 2
+#define EFFECTS 3
+
 void print_dbg(char* msg);
 
 extern volatile int16_t rms_value;
+extern volatile int16_t effect_type;
+
 // extern volatile float32_t fft_out_buff[AUDIO_BLOCK_SAMPLES];
 
 /* USER CODE END Private defines */

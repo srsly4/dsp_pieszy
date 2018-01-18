@@ -139,7 +139,7 @@ uint16_t debug_msg_pos = 10;
 
 
 volatile int16_t rms_value = 99;
-
+volatile int16_t effect_type = EFFECT_NONE;
 
 /* USER CODE END 0 */
 
@@ -1133,58 +1133,59 @@ static void CPU_CACHE_Enable(void) {
 }
 
 static void audio_process(void) {
-	int16_t* buffer = (int16_t*)AUDIO_BUFFER_INTERNAL;
-	int16_t* secondary = (int16_t*)AUDIO_BUFFER_SECONDARY;
-	int16_t* offset_buff = (int16_t*)AUDIO_BUFFER_OFFSET;
+	int16_t* buffer = (int16_t*) AUDIO_BUFFER_INTERNAL;
+	int16_t* secondary = (int16_t*) AUDIO_BUFFER_SECONDARY;
+	int16_t* offset_buff = (int16_t*) AUDIO_BUFFER_OFFSET;
 
 	//float32_t fft_buff[AUDIO_BLOCK_SAMPLES];
 
-	int offset = 3800;
 // natezenie
+
 //	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
 //		buffer[i] = buffer[i]/32;
 //		buffer[i] = buffer[i]-1;
 //	}
 
 // pitch
-//	int pitch_ratio = 16;
-//	for (int i = 0; i < AUDIO_BLOCK_SAMPLES/2; i++) {
-//		buffer[i] = (buffer[2*i]/pitch_ratio) + (buffer[(2*i)+1]/pitch_ratio);
-//	}
-//	for (int i = AUDIO_BLOCK_SAMPLES/2; i < AUDIO_BLOCK_SAMPLES; i++) {
-//		buffer[i] = buffer[i-(AUDIO_BLOCK_SAMPLES/2)];
-//	}
-
-// echo
-	int offsetCurr = 0;
-	int fadeCurr = 0;
-	for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-		if (offsetCurr < offset) {
-			secondary[i] = buffer[i] + (offset_buff[offsetCurr]/2);
-			offsetCurr += 1;
-		} else {
-			secondary[i] = buffer[i] + (buffer[fadeCurr]/2);
-			fadeCurr += 1;
+	if (effect_type == EFFECT_PITCH) {
+		int pitch_ratio = 16;
+		for (int i = 0; i < AUDIO_BLOCK_SAMPLES / 2; i++) {
+			buffer[i] = (buffer[2 * i] / pitch_ratio)
+					+ (buffer[(2 * i) + 1] / pitch_ratio);
+		}
+		for (int i = AUDIO_BLOCK_SAMPLES / 2; i < AUDIO_BLOCK_SAMPLES; i++) {
+			buffer[i] = buffer[i - (AUDIO_BLOCK_SAMPLES / 2)];
 		}
 	}
 
-	for (int i = 0; i < offset; i++){
-		offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES-offset+i];
-	}
+// echo
+	else if (effect_type == EFFECT_ECHO) {
+		int offset = 3800;
+		int offsetCurr = 0;
+		int fadeCurr = 0;
+		for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+			if (offsetCurr < offset) {
+				secondary[i] = buffer[i] + (offset_buff[offsetCurr] / 2);
+				offsetCurr += 1;
+			} else {
+				secondary[i] = buffer[i] + (buffer[fadeCurr] / 2);
+				fadeCurr += 1;
+			}
+		}
 
+		for (int i = 0; i < offset; i++) {
+			offset_buff[i] = buffer[AUDIO_BLOCK_SAMPLES - offset + i];
+		}
+
+		memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
+				AUDIO_BLOCK_SIZE);
+	}
 
 	// RMS calculate
 	arm_rms_q15(
 		AUDIO_BUFFER_INTERNAL,
 		AUDIO_BLOCK_SAMPLES,
 	&rms_value);
-
-
-	// FFT
-
-
-	memcpy((uint16_t *) (AUDIO_BUFFER_INTERNAL), (uint16_t *) (AUDIO_BUFFER_SECONDARY),
-			AUDIO_BLOCK_SIZE);
 }
 
 
